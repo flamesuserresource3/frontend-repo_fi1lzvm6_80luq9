@@ -1,113 +1,92 @@
-import { useEffect, useRef, useState } from "react";
-import Header from "./components/Header";
-import Sidebar from "./components/Sidebar";
-import ParticipantGrid from "./components/ParticipantGrid";
-import ControlBar from "./components/ControlBar";
+import { useEffect, useState } from "react";
+import Header from "./components/Header.jsx";
+import JoinPanel from "./components/JoinPanel.jsx";
+import VideoStage from "./components/VideoStage.jsx";
+import Controls from "./components/Controls.jsx";
 
 export default function App() {
   const [joined, setJoined] = useState(false);
-  const [roomName, setRoomName] = useState("general");
+  const [displayName, setDisplayName] = useState("");
+  const [stream, setStream] = useState(null);
   const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(true);
-  const [localStream, setLocalStream] = useState(null);
-  const mediaTracks = useRef({ audio: null, video: null });
+  const [cameraOn, setCameraOn] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    // Toggle tracks when mic/cam switch while joined
-    if (!joined) return;
-    const { audio, video } = mediaTracks.current;
-    if (audio) audio.enabled = micOn;
-    if (video) video.enabled = camOn;
-  }, [micOn, camOn, joined]);
+    return () => {
+      stream?.getTracks().forEach((t) => t.stop());
+    };
+  }, [stream]);
 
-  const startLocalMedia = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-    const audio = stream.getAudioTracks()[0] || null;
-    const video = stream.getVideoTracks()[0] || null;
-    if (audio) audio.enabled = micOn;
-    if (video) video.enabled = camOn;
-    mediaTracks.current = { audio, video };
-    setLocalStream(stream);
-  };
-
-  const stopLocalMedia = () => {
-    if (localStream) {
-      localStream.getTracks().forEach((t) => t.stop());
-      setLocalStream(null);
-    }
-    mediaTracks.current = { audio: null, video: null };
-  };
-
-  const handleJoin = async () => {
+  const join = async (name) => {
+    setBusy(true);
+    setError("");
     try {
-      await startLocalMedia();
+      const media = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+      setStream(media);
+      setDisplayName(name);
       setJoined(true);
-    } catch (err) {
-      console.error(err);
-      alert("Could not access your camera/microphone. Please check permissions.");
+      setMicOn(true);
+      setCameraOn(true);
+    } catch (e) {
+      console.error(e);
+      setError("Could not access camera/microphone. Please check permissions.");
+    } finally {
+      setBusy(false);
     }
   };
 
-  const handleLeave = () => {
-    stopLocalMedia();
+  const leave = () => {
+    stream?.getTracks().forEach((t) => t.stop());
+    setStream(null);
     setJoined(false);
   };
 
-  const [rooms, setRooms] = useState(["general", "standup", "music"]);
-  const handleCreateRoom = () => {
-    const base = "room-" + Math.random().toString(36).slice(2, 6);
-    setRooms((r) => [base, ...r]);
-    setRoomName(base);
+  const toggleMic = () => {
+    const next = !micOn;
+    setMicOn(next);
+    stream?.getAudioTracks().forEach((t) => (t.enabled = next));
   };
 
-  const handleSelectRoom = (r) => {
-    setRoomName(r);
+  const toggleCamera = () => {
+    const next = !cameraOn;
+    setCameraOn(next);
+    stream?.getVideoTracks().forEach((t) => (t.enabled = next));
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col">
-      <Header appName="dera-conference-demo" roomName={roomName} onOpenSettings={() => alert("Device settings coming soon")} />
-
-      <div className="flex-1 flex overflow-hidden">
-        <Sidebar onCreateRoom={handleCreateRoom} rooms={rooms} onSelectRoom={handleSelectRoom} />
-
-        <main className="flex-1 flex flex-col">
-          {!joined ? (
-            <section className="flex-1 grid place-items-center p-6">
-              <div className="max-w-xl w-full bg-neutral-900 border border-neutral-800 rounded-2xl p-6 text-center">
-                <h2 className="text-xl font-semibold">Start a group call</h2>
-                <p className="text-neutral-400 mt-1">Join the room to preview your camera and microphone. This demo simulates other participants to showcase the layout.</p>
-                <div className="mt-4 flex items-center gap-2">
-                  <input
-                    value={roomName}
-                    onChange={(e) => setRoomName(e.target.value)}
-                    placeholder="# room-name"
-                    className="flex-1 bg-neutral-950 border border-neutral-800 rounded-md px-3 py-2 text-sm text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                  />
-                  <button onClick={handleJoin} className="rounded-md bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 text-sm">Join room</button>
-                </div>
-                <p className="text-xs text-neutral-500 mt-3">Note: Real-time group calling needs a signaling server. This demo focuses on the interface and local media preview.</p>
+    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+      <Header />
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        {!joined ? (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h1 className="text-2xl font-semibold tracking-tight">Start a simple call</h1>
+              <p className="text-neutral-400 text-sm mt-2">No channels or servers — just join and share your screen with others.</p>
+            </div>
+            <JoinPanel onJoin={join} busy={busy} />
+            {error && (
+              <div className="max-w-md mx-auto rounded-lg border border-rose-900 bg-rose-950/40 p-3 text-rose-300 text-sm">
+                {error}
               </div>
-            </section>
-          ) : (
-            <section className="flex-1 flex flex-col">
-              <ParticipantGrid localStream={localStream} camOn={camOn} />
-            </section>
-          )}
-
-          <ControlBar
-            joined={joined}
-            onJoin={handleJoin}
-            onLeave={handleLeave}
-            micOn={micOn}
-            camOn={camOn}
-            setMicOn={setMicOn}
-            setCamOn={setCamOn}
-            roomName={roomName}
-            setRoomName={setRoomName}
-          />
-        </main>
-      </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <VideoStage stream={stream} cameraOn={cameraOn} displayName={displayName} />
+            <p className="text-center text-neutral-400 text-sm">You're in the call. Share the page link with a friend to join once we add real-time signaling.</p>
+          </div>
+        )}
+      </main>
+      <Controls
+        joined={joined}
+        micOn={micOn}
+        cameraOn={cameraOn}
+        onToggleMic={toggleMic}
+        onToggleCamera={toggleCamera}
+        onLeave={leave}
+      />
     </div>
   );
 }

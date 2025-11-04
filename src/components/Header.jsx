@@ -1,23 +1,18 @@
-import { Users, Settings } from "lucide-react";
+import { Video } from "lucide-react";
 
-export default function Header({ appName = "dera-conference-demo", roomName, onOpenSettings }) {
+export default function Header() {
   return (
-    <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-neutral-800 bg-neutral-900/60 backdrop-blur supports-[backdrop-filter]:bg-neutral-900/40">
-      <div className="flex items-center gap-3">
-        <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center font-semibold">D</div>
-        <div>
-          <h1 className="text-white font-semibold leading-tight">{appName}</h1>
-          <p className="text-xs text-neutral-400">{roomName ? `Room: ${roomName}` : "Create or join a room"}</p>
+    <header className="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-950/70 backdrop-blur supports-[backdrop-filter]:bg-neutral-950/40">
+      <div className="mx-auto max-w-6xl px-4 h-14 flex items-center gap-2">
+        <div className="flex items-center gap-2 text-neutral-200">
+          <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600/20 text-indigo-400">
+            <Video size={18} />
+          </div>
+          <span className="font-semibold tracking-tight">dera-conference-demo</span>
         </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <span className="hidden sm:flex items-center text-neutral-400 text-sm gap-1"><Users size={18} /> Group Call</span>
-        <button
-          onClick={onOpenSettings}
-          className="inline-flex items-center gap-2 rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-3 py-2 text-sm transition"
-        >
-          <Settings size={18} /> Settings
-        </button>
+        <div className="ml-auto text-xs text-neutral-400">
+          Simple, friendly group calling demo
+        </div>
       </div>
     </header>
   );
